@@ -1,0 +1,12 @@
+# Python requirements for ONNX document processing
+onnxruntime>=1.16.0
+opencv-python>=4.8.0
+Pillow>=10.0.0
+numpy>=1.24.0
+
+# Optional: For GPU support (if available)
+# onnxruntime-gpu>=1.16.0
+
+# Additional ML libraries that might be useful
+scikit-image>=0.21.0
+matplotlib>=3.7.0

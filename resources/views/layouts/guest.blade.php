@@ -4,6 +4,7 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
+        <link rel="icon" type="image/png" href="{{ asset('csu_logo.png') }}">
 
         <title>{{ config('app.name', 'Laravel') }}</title>
 
@@ -17,8 +18,10 @@
     <body class="font-sans text-gray-900 antialiased">
         <div class="min-h-screen flex flex-col sm:justify-center items-center pt-6 sm:pt-0 bg-gray-100">
             <div>
-                <a href="/">
-                    <x-application-logo class="w-20 h-20 fill-current text-gray-500" />
+                <a href="/" class="flex flex-col items-center">
+                    <img src="{{ asset('csu_logo.png') }}" alt="CSU Logo" class="w-20 h-20">
+                    <span class="mt-2 text-xl font-bold text-gray-700">DMRS</span>
+                    <span class="text-sm text-gray-500">Cagayan State University - Aparri</span>
                 </a>
             </div>
 

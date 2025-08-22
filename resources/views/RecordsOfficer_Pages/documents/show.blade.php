@@ -66,25 +66,29 @@
                                 <h4 class="text-lg font-medium text-gray-900 mb-3">🔍 Detected Elements</h4>
                                 <div class="border border-gray-200 rounded-lg p-4 bg-gray-50">
                                     <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
-                                        @foreach($document->detected_objects as $object)
-                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                                {{ $object }}
-                                            </span>
-                                        @endforeach
+                                        @if(is_array($document->detected_objects))
+                                            @foreach($document->detected_objects as $object)
+                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                                    {{ is_string($object) ? $object : (is_array($object) ? json_encode($object) : strval($object)) }}
+                                                </span>
+                                            @endforeach
+                                        @else
+                                            <span class="text-gray-500">No objects detected</span>
+                                        @endif
                                     </div>
                                 </div>
                             </div>
                         @endif
 
                         <!-- Document Numbers -->
-                        @if($document->document_numbers && count($document->document_numbers) > 0)
+                        @if($document->document_numbers && is_array($document->document_numbers) && count($document->document_numbers) > 0)
                             <div>
                                 <h4 class="text-lg font-medium text-gray-900 mb-3">🔢 Extracted Numbers</h4>
                                 <div class="border border-gray-200 rounded-lg p-4 bg-gray-50">
                                     <div class="flex flex-wrap gap-2">
                                         @foreach($document->document_numbers as $number)
                                             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                                                {{ $number }}
+                                                {{ is_string($number) ? $number : (is_array($number) ? json_encode($number) : strval($number)) }}
                                             </span>
                                         @endforeach
                                     </div>

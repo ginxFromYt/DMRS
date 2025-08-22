@@ -114,20 +114,20 @@
                                 </label>
                                 <div class="flex space-x-4">
                                     <label class="flex items-center">
-                                        <input type="radio" name="upload_type" value="single" checked 
-                                               class="mr-2 text-blue-600 focus:ring-blue-500" 
+                                        <input type="radio" name="upload_type" value="single" checked
+                                               class="mr-2 text-blue-600 focus:ring-blue-500"
                                                onchange="toggleUploadType()">
                                         <span class="text-sm text-gray-700">Single Image</span>
                                     </label>
                                     <label class="flex items-center">
-                                        <input type="radio" name="upload_type" value="multiple" 
-                                               class="mr-2 text-blue-600 focus:ring-blue-500" 
+                                        <input type="radio" name="upload_type" value="multiple"
+                                               class="mr-2 text-blue-600 focus:ring-blue-500"
                                                onchange="toggleUploadType()">
                                         <span class="text-sm text-gray-700">Multiple Images</span>
                                     </label>
                                     <label class="flex items-center">
-                                        <input type="radio" name="upload_type" value="mixed" 
-                                               class="mr-2 text-blue-600 focus:ring-blue-500" 
+                                        <input type="radio" name="upload_type" value="mixed"
+                                               class="mr-2 text-blue-600 focus:ring-blue-500"
                                                onchange="toggleUploadType()">
                                         <span class="text-sm text-gray-700">Images + PDFs</span>
                                     </label>

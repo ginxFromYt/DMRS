@@ -44,7 +44,7 @@
                                 <!-- Document Type Indicator -->
                                 @if($document->document_type)
                                     <div class="mb-4">
-                                        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium 
+                                        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium
                                             @if($document->document_type === 'image') bg-green-100 text-green-800
                                             @elseif($document->document_type === 'pdf') bg-red-100 text-red-800
                                             @else bg-purple-100 text-purple-800 @endif">
@@ -59,7 +59,7 @@
                                     <div class="mb-6">
                                         <div class="flex justify-between items-center mb-3">
                                             <h4 class="text-lg font-medium text-gray-900">
-                                                📄 Document Images 
+                                                📄 Document Images
                                                 @if(count($document->image_files) > 1)
                                                     <span class="text-sm text-gray-500">({{ count($document->image_files) }} images)</span>
                                                 @endif
@@ -87,7 +87,7 @@
                                         <!-- Main Image Display -->
                                         <div class="border border-gray-200 rounded-lg p-4 bg-gray-50 text-center mb-4">
                                             @foreach($document->image_files as $index => $imagePath)
-                                                <img id="documentImage{{ $index }}" 
+                                                <img id="documentImage{{ $index }}"
                                                      src="{{ asset('storage/' . str_replace('storage/', '', $imagePath)) }}"
                                                      alt="{{ $document->title }} - Image {{ $index + 1 }}"
                                                      class="max-w-full h-auto rounded-md shadow-sm mx-auto transition-transform duration-300 {{ $index === 0 ? '' : 'hidden' }}"
@@ -100,7 +100,7 @@
                                         @if(count($document->image_files) > 1)
                                             <div class="flex flex-wrap gap-2 justify-center">
                                                 @foreach($document->image_files as $index => $imagePath)
-                                                    <button onclick="switchImage({{ $index }})" 
+                                                    <button onclick="switchImage({{ $index }})"
                                                             class="thumbnail-btn border-2 rounded-lg overflow-hidden transition-all duration-200 {{ $index === 0 ? 'border-blue-500' : 'border-gray-300 hover:border-gray-400' }}"
                                                             data-index="{{ $index }}">
                                                         <img src="{{ asset('storage/' . str_replace('storage/', '', $imagePath)) }}"
@@ -117,7 +117,7 @@
                                 @if($document->pdf_files && count($document->pdf_files) > 0)
                                     <div class="mb-6">
                                         <h4 class="text-lg font-medium text-gray-900 mb-3">
-                                            📋 PDF Documents 
+                                            📋 PDF Documents
                                             @if(count($document->pdf_files) > 1)
                                                 <span class="text-sm text-gray-500">({{ count($document->pdf_files) }} files)</span>
                                             @endif
@@ -130,12 +130,12 @@
                                                             📄 {{ basename($pdfPath) }}
                                                         </span>
                                                         <div class="flex space-x-2">
-                                                            <a href="{{ asset('storage/' . str_replace('storage/', '', $pdfPath)) }}" 
+                                                            <a href="{{ asset('storage/' . str_replace('storage/', '', $pdfPath)) }}"
                                                                target="_blank"
                                                                class="bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-1 rounded-md text-sm font-medium">
                                                                 👁️ View
                                                             </a>
-                                                            <a href="{{ asset('storage/' . str_replace('storage/', '', $pdfPath)) }}" 
+                                                            <a href="{{ asset('storage/' . str_replace('storage/', '', $pdfPath)) }}"
                                                                download
                                                                class="bg-green-100 hover:bg-green-200 text-green-700 px-3 py-1 rounded-md text-sm font-medium">
                                                                 💾 Download
@@ -144,10 +144,10 @@
                                                     </div>
                                                     <!-- PDF Embed -->
                                                     <div class="bg-white rounded border" style="height: 500px;">
-                                                        <iframe src="{{ asset('storage/' . str_replace('storage/', '', $pdfPath)) }}" 
+                                                        <iframe src="{{ asset('storage/' . str_replace('storage/', '', $pdfPath)) }}"
                                                                 class="w-full h-full rounded"
                                                                 title="PDF Viewer - {{ basename($pdfPath) }}">
-                                                            <p>Your browser doesn't support PDF viewing. 
+                                                            <p>Your browser doesn't support PDF viewing.
                                                                <a href="{{ asset('storage/' . str_replace('storage/', '', $pdfPath)) }}" target="_blank">
                                                                    Click here to view the PDF.
                                                                </a>
@@ -178,7 +178,7 @@
                                             </div>
                                         </div>
                                         <div class="border border-gray-200 rounded-lg p-4 bg-gray-50 text-center">
-                                            <img id="documentImage" 
+                                            <img id="documentImage"
                                                  src="{{ asset('storage/' . str_replace('storage/', '', $document->file_path)) }}"
                                                  alt="{{ $document->title }}"
                                                  class="max-w-full h-auto rounded-md shadow-sm mx-auto transition-transform duration-300"
@@ -231,6 +231,89 @@
                                             </span>
                                         @endforeach
                                     </div>
+                                </div>
+                            </div>
+                        @endif
+
+                        <!-- PDF Metadata and Extracted Information -->
+                        @if($document->metadata && is_array($document->metadata) && count($document->metadata) > 0)
+                            <div>
+                                <h4 class="text-lg font-medium text-gray-900 mb-3">📋 Document Metadata</h4>
+                                <div class="border border-gray-200 rounded-lg p-4 bg-gray-50 space-y-4">
+                                    @foreach($document->metadata as $index => $metadata)
+                                        <div class="bg-white rounded-lg p-3 border border-gray-100">
+                                            @if(isset($metadata['pages']))
+                                                <div class="text-sm text-gray-600 mb-2">
+                                                    <strong>File {{ $index + 1 }} - PDF Document</strong>
+                                                </div>
+                                            @endif
+                                            
+                                            <div class="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
+                                                @if(isset($metadata['pages']) && $metadata['pages'] !== 'Unknown')
+                                                    <div>
+                                                        <span class="font-medium text-gray-700">Pages:</span>
+                                                        <span class="text-gray-600">{{ $metadata['pages'] }}</span>
+                                                    </div>
+                                                @endif
+                                                
+                                                @if(isset($metadata['author']) && $metadata['author'])
+                                                    <div>
+                                                        <span class="font-medium text-gray-700">Author:</span>
+                                                        <span class="text-gray-600">{{ $metadata['author'] }}</span>
+                                                    </div>
+                                                @endif
+                                                
+                                                @if(isset($metadata['creator']) && $metadata['creator'])
+                                                    <div>
+                                                        <span class="font-medium text-gray-700">Creator:</span>
+                                                        <span class="text-gray-600">{{ $metadata['creator'] }}</span>
+                                                    </div>
+                                                @endif
+                                                
+                                                @if(isset($metadata['creation_date']) && $metadata['creation_date'])
+                                                    <div>
+                                                        <span class="font-medium text-gray-700">Created:</span>
+                                                        <span class="text-gray-600">{{ date('M d, Y', strtotime($metadata['creation_date'])) }}</span>
+                                                    </div>
+                                                @endif
+                                                
+                                                @if(isset($metadata['document_type']) && $metadata['document_type'])
+                                                    <div>
+                                                        <span class="font-medium text-gray-700">Type:</span>
+                                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                                                            {{ ucfirst($metadata['document_type']) }}
+                                                        </span>
+                                                    </div>
+                                                @endif
+                                            </div>
+
+                                            <!-- Extracted Information from PDF -->
+                                            @if(isset($metadata['extracted_info']) && is_array($metadata['extracted_info']))
+                                                <div class="mt-3 pt-3 border-t border-gray-100">
+                                                    <div class="text-sm font-medium text-gray-700 mb-2">Extracted Information:</div>
+                                                    <div class="space-y-2">
+                                                        @foreach($metadata['extracted_info'] as $type => $items)
+                                                            @if(!empty($items))
+                                                                <div>
+                                                                    <span class="text-xs font-medium text-gray-600 uppercase">{{ ucfirst($type) }}:</span>
+                                                                    <div class="flex flex-wrap gap-1 mt-1">
+                                                                        @foreach(array_slice($items, 0, 5) as $item)
+                                                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-700">
+                                                                                {{ $item }}
+                                                                            </span>
+                                                                        @endforeach
+                                                                        @if(count($items) > 5)
+                                                                            <span class="text-xs text-gray-500">+{{ count($items) - 5 }} more</span>
+                                                                        @endif
+                                                                    </div>
+                                                                </div>
+                                                            @endif
+                                                        @endforeach
+                                                    </div>
+                                                </div>
+                                            @endif
+                                        </div>
+                                    @endforeach
                                 </div>
                             </div>
                         @endif

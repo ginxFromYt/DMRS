@@ -5,6 +5,7 @@ namespace App\Services;
 use Illuminate\Support\Facades\Log;
 use Intervention\Image\ImageManager;
 use Intervention\Image\Drivers\Gd\Driver;
+use Smalot\PdfParser\Parser as PdfParser;
 
 // Google Cloud Vision imports
 use Google\Cloud\Vision\V1\Client\ImageAnnotatorClient;
@@ -16,7 +17,8 @@ use Google\Cloud\Vision\V1\BatchAnnotateImagesRequest;
 class DocumentProcessingService
 {
     protected $visionClient;
-    protected $imageManager;    public function __construct()
+    protected $imageManager;
+    protected $pdfParser;    public function __construct()
     {
         try {
             // Initialize Google Cloud Vision client only if properly configured
@@ -36,6 +38,9 @@ class DocumentProcessingService
 
         // Initialize Intervention Image
         $this->imageManager = new ImageManager(new Driver());
+        
+        // Initialize PDF Parser
+        $this->pdfParser = new PdfParser();
     }
 
     /**
@@ -482,6 +487,125 @@ class DocumentProcessingService
         // Parse the results from your ONNX model
         // Convert to the standardized format used by this service
         return [];
+    }
+
+    /**
+     * Process PDF document for text extraction
+     */
+    public function processPdf($pdfPath, $title, $description)
+    {
+        try {
+            Log::info("Starting PDF processing for: {$pdfPath}");
+
+            $results = [
+                'title' => $title,
+                'description' => $description,
+                'file_path' => $pdfPath,
+                'detected_objects' => [], // PDFs don't have visual object detection
+                'document_numbers' => [],
+                'extracted_text' => '',
+                'processing_status' => 'success',
+                'error_message' => null,
+                'metadata' => []
+            ];
+
+            // Parse PDF and extract text
+            $pdf = $this->pdfParser->parseFile($pdfPath);
+            $extractedText = $pdf->getText();
+
+            if (empty($extractedText)) {
+                Log::warning("No text could be extracted from PDF: {$pdfPath}");
+                $results['extracted_text'] = '';
+            } else {
+                $results['extracted_text'] = trim($extractedText);
+                Log::info("Successfully extracted " . strlen($extractedText) . " characters from PDF");
+            }
+
+            // Extract document numbers from PDF text
+            $results['document_numbers'] = $this->extractDocumentNumbers($extractedText);
+
+            // Extract PDF metadata
+            $metadata = $pdf->getDetails();
+            $results['metadata'] = [
+                'pages' => isset($metadata['Pages']) ? $metadata['Pages'] : 'Unknown',
+                'creator' => isset($metadata['Creator']) ? $metadata['Creator'] : null,
+                'producer' => isset($metadata['Producer']) ? $metadata['Producer'] : null,
+                'creation_date' => isset($metadata['CreationDate']) ? $metadata['CreationDate'] : null,
+                'modification_date' => isset($metadata['ModDate']) ? $metadata['ModDate'] : null,
+                'title' => isset($metadata['Title']) ? $metadata['Title'] : null,
+                'author' => isset($metadata['Author']) ? $metadata['Author'] : null,
+                'subject' => isset($metadata['Subject']) ? $metadata['Subject'] : null,
+            ];
+
+            // Look for common document identifiers in PDF
+            $this->extractPdfDocumentInfo($extractedText, $results);
+
+            Log::info("PDF processing completed successfully for: {$pdfPath}");
+            return $results;
+
+        } catch (\Exception $e) {
+            Log::error("PDF processing failed for {$pdfPath}: " . $e->getMessage());
+            
+            return [
+                'title' => $title,
+                'description' => $description,
+                'file_path' => $pdfPath,
+                'detected_objects' => [],
+                'document_numbers' => [],
+                'extracted_text' => '',
+                'processing_status' => 'error',
+                'error_message' => 'Failed to process PDF: ' . $e->getMessage(),
+                'metadata' => []
+            ];
+        }
+    }
+
+    /**
+     * Extract document-specific information from PDF text
+     */
+    protected function extractPdfDocumentInfo($text, &$results)
+    {
+        // Look for common patterns in PDF documents
+        $patterns = [
+            // Reference numbers, invoice numbers, etc.
+            'reference' => '/(?:ref(?:erence)?|inv(?:oice)?|doc(?:ument)?)\s*(?:no|number|#)?[\s:]*([A-Z0-9-\/]+)/i',
+            // Dates
+            'dates' => '/\b(\d{1,2}[-\/]\d{1,2}[-\/]\d{4}|\d{4}[-\/]\d{1,2}[-\/]\d{1,2})\b/',
+            // Amounts/Currency
+            'amounts' => '/[\$€£¥₹]\s*[\d,]+\.?\d{0,2}|\b\d+\.?\d{0,2}\s*(?:USD|EUR|GBP|INR|dollars?|euros?)\b/i',
+            // Email addresses
+            'emails' => '/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/',
+            // Phone numbers
+            'phones' => '/(?:\+?1[-.\s]?)?\(?[0-9]{3}\)?[-.\s]?[0-9]{3}[-.\s]?[0-9]{4}/',
+        ];
+
+        $extractedInfo = [];
+        foreach ($patterns as $type => $pattern) {
+            if (preg_match_all($pattern, $text, $matches)) {
+                $extractedInfo[$type] = array_unique($matches[1] ?? $matches[0]);
+            }
+        }
+
+        // Add extracted information to metadata
+        if (!empty($extractedInfo)) {
+            $results['metadata']['extracted_info'] = $extractedInfo;
+        }
+
+        // Look for document types
+        $documentTypes = [
+            'invoice' => '/\b(?:invoice|bill|receipt)\b/i',
+            'contract' => '/\b(?:contract|agreement|terms)\b/i',
+            'report' => '/\b(?:report|summary|analysis)\b/i',
+            'memo' => '/\b(?:memo|memorandum|notice)\b/i',
+            'letter' => '/\b(?:letter|correspondence)\b/i',
+        ];
+
+        foreach ($documentTypes as $type => $pattern) {
+            if (preg_match($pattern, $text)) {
+                $results['metadata']['document_type'] = $type;
+                break;
+            }
+        }
     }
 
     public function __destruct()

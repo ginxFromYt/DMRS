@@ -66,7 +66,7 @@
                                     </div>
                                 </div>
                                 <div class="border border-gray-200 rounded-lg p-4 bg-gray-50 text-center">
-                                    <img id="documentImage" 
+                                    <img id="documentImage"
                                          src="{{ asset('storage/' . str_replace('storage/', '', $document->file_path)) }}"
                                          alt="{{ $document->title }}"
                                          class="max-w-full h-auto rounded-md shadow-sm mx-auto transition-transform duration-300"

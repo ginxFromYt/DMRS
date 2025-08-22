@@ -29,6 +29,7 @@ class Document extends Model
         'extracted_text',
         'detected_objects',
         'document_numbers',
+        'metadata',
         'received_at',
         'forwarded_at',
         'reviewed_at',
@@ -45,6 +46,7 @@ class Document extends Model
     protected $casts = [
         'detected_objects' => 'array',
         'document_numbers' => 'array',
+        'metadata' => 'array',
         'file_paths' => 'array',
         'file_types' => 'array',
         'received_at' => 'datetime',

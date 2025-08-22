@@ -72,7 +72,7 @@ class DocumentHandlingController extends Controller
                     $imagePath = $image->storeAs('uploads', $filename, 'public');
                     $uploadedFiles[] = $imagePath;
                     $fileTypes[] = 'image';
-                    
+
                     // Set first image as primary if not already set
                     if (!$primaryFilePath) {
                         $primaryFilePath = $imagePath;
@@ -87,7 +87,7 @@ class DocumentHandlingController extends Controller
                     $pdfPath = $pdf->storeAs('documents', $filename, 'public');
                     $uploadedFiles[] = $pdfPath;
                     $fileTypes[] = 'pdf';
-                    
+
                     // Update document type if we have PDFs
                     if ($documentType === 'image') {
                         $documentType = count($uploadedFiles) > 1 ? 'mixed' : 'pdf';
@@ -103,35 +103,101 @@ class DocumentHandlingController extends Controller
                     ->withInput();
             }
 
-            // Process the primary image file with ML model and OCR (only for images)
+            // Process files with ML model and OCR (images) or text extraction (PDFs)
             $processingResults = [
                 'extracted_text' => '',
                 'detected_objects' => [],
                 'document_numbers' => [],
-                'processing_status' => 'success'
+                'processing_status' => 'success',
+                'metadata' => []
             ];
 
+            $allExtractedText = [];
+            $allDetectedObjects = [];
+            $allDocumentNumbers = [];
+            $allMetadata = [];
+
+            // Process primary file
             if ($primaryFilePath) {
                 $extension = strtolower(pathinfo($primaryFilePath, PATHINFO_EXTENSION));
+                $fullFilePath = storage_path('app/public/' . $primaryFilePath);
+                
                 if (in_array($extension, ['jpg', 'jpeg', 'png', 'gif', 'webp'])) {
-                    $fullImagePath = storage_path('app/public/' . $primaryFilePath);
-                    Log::info('Starting document processing for primary file: ' . $primaryFilePath);
+                    // Process image file
+                    Log::info('Starting image processing for primary file: ' . $primaryFilePath);
                     
-                    $processingResults = $this->documentProcessingService->processDocument(
-                        $fullImagePath,
+                    $imageResults = $this->documentProcessingService->processDocument(
+                        $fullFilePath,
                         $request->title,
                         $request->description
                     );
 
-                    if ($processingResults['processing_status'] === 'error') {
+                    if ($imageResults['processing_status'] === 'error') {
                         return back()
-                            ->with('error', 'Files uploaded but processing failed: ' . $processingResults['error_message'])
+                            ->with('error', 'Files uploaded but image processing failed: ' . $imageResults['error_message'])
                             ->withInput();
                     }
+
+                    $allExtractedText[] = $imageResults['extracted_text'];
+                    $allDetectedObjects = array_merge($allDetectedObjects, $imageResults['detected_objects']);
+                    $allDocumentNumbers = array_merge($allDocumentNumbers, $imageResults['document_numbers']);
+                    
+                } elseif ($extension === 'pdf') {
+                    // Process PDF file
+                    Log::info('Starting PDF processing for primary file: ' . $primaryFilePath);
+                    
+                    $pdfResults = $this->documentProcessingService->processPdf(
+                        $fullFilePath,
+                        $request->title,
+                        $request->description
+                    );
+
+                    if ($pdfResults['processing_status'] === 'error') {
+                        return back()
+                            ->with('error', 'Files uploaded but PDF processing failed: ' . $pdfResults['error_message'])
+                            ->withInput();
+                    }
+
+                    $allExtractedText[] = $pdfResults['extracted_text'];
+                    $allDocumentNumbers = array_merge($allDocumentNumbers, $pdfResults['document_numbers']);
+                    $allMetadata[] = $pdfResults['metadata'];
                 }
             }
 
-            // Prepare file data for database
+            // Process additional files for text extraction
+            foreach ($uploadedFiles as $index => $filePath) {
+                if ($filePath === $primaryFilePath) continue; // Skip primary file (already processed)
+                
+                $extension = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
+                $fullFilePath = storage_path('app/public/' . $filePath);
+                
+                if ($extension === 'pdf') {
+                    Log::info("Processing additional PDF file: {$filePath}");
+                    
+                    $pdfResults = $this->documentProcessingService->processPdf(
+                        $fullFilePath,
+                        $request->title,
+                        "Additional PDF - {$request->description}"
+                    );
+
+                    if ($pdfResults['processing_status'] === 'success') {
+                        $allExtractedText[] = $pdfResults['extracted_text'];
+                        $allDocumentNumbers = array_merge($allDocumentNumbers, $pdfResults['document_numbers']);
+                        $allMetadata[] = $pdfResults['metadata'];
+                    }
+                }
+                // Note: Additional images are not processed to avoid overwhelming the system
+                // Only the primary image gets full ML processing
+            }
+
+            // Combine all processing results
+            $processingResults = [
+                'extracted_text' => implode("\n\n---\n\n", array_filter($allExtractedText)),
+                'detected_objects' => array_unique($allDetectedObjects, SORT_REGULAR),
+                'document_numbers' => array_unique($allDocumentNumbers),
+                'processing_status' => 'success',
+                'metadata' => $allMetadata
+            ];            // Prepare file data for database
             $primaryFile = $uploadedFiles[0]; // First uploaded file
             $additionalFiles = array_slice($uploadedFiles, 1); // Remaining files
             $additionalFileTypes = array_slice($fileTypes, 1);
@@ -150,13 +216,25 @@ class DocumentHandlingController extends Controller
                 'extracted_text' => $processingResults['extracted_text'],
                 'detected_objects' => $processingResults['detected_objects'],
                 'document_numbers' => $processingResults['document_numbers'],
+                'metadata' => $processingResults['metadata'],
             ]);
 
             // Prepare success message with processing results
             $fileCount = count($uploadedFiles);
+            $imageCount = count(array_filter($fileTypes, fn($type) => $type === 'image'));
+            $pdfCount = count(array_filter($fileTypes, fn($type) => $type === 'pdf'));
+            
             $message = "Document uploaded successfully with {$fileCount} file(s)!\n";
             $message .= "Document ID: {$document->id}\n";
             $message .= "Document Type: {$documentType}\n";
+            
+            if ($imageCount > 0 && $pdfCount > 0) {
+                $message .= "Files: {$imageCount} image(s) + {$pdfCount} PDF(s)\n";
+            } elseif ($pdfCount > 0) {
+                $message .= "Files: {$pdfCount} PDF document(s)\n";
+            } else {
+                $message .= "Files: {$imageCount} image(s)\n";
+            }
 
             if (!empty($processingResults['document_numbers'])) {
                 $message .= "Found document numbers: " . implode(', ', $processingResults['document_numbers']) . "\n";
@@ -168,8 +246,22 @@ class DocumentHandlingController extends Controller
             }
 
             if (!empty($processingResults['extracted_text'])) {
+                $textLength = strlen($processingResults['extracted_text']);
                 $textPreview = substr($processingResults['extracted_text'], 0, 100);
-                $message .= "Text preview: " . $textPreview . "...";
+                $message .= "Extracted text ({$textLength} characters): " . $textPreview . "...";
+            }
+
+            // Add PDF metadata info if available
+            if (!empty($processingResults['metadata'])) {
+                $pdfInfo = [];
+                foreach ($processingResults['metadata'] as $metadata) {
+                    if (isset($metadata['pages'])) {
+                        $pdfInfo[] = "Pages: {$metadata['pages']}";
+                    }
+                }
+                if (!empty($pdfInfo)) {
+                    $message .= "\nPDF Info: " . implode(', ', $pdfInfo);
+                }
             }
 
             // Store processing results in session for display

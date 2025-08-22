@@ -46,11 +46,34 @@
                         <!-- Document Image/File Display -->
                         @if($document->image_path)
                             <div>
-                                <h4 class="text-lg font-medium text-gray-900 mb-3">📄 Document Image</h4>
-                                <div class="border border-gray-200 rounded-lg p-4 bg-gray-50">
-                                    <img src="{{ asset('storage/' . str_replace('storage/', '', $document->file_path)) }}"
+                                <div class="flex justify-between items-center mb-3">
+                                    <h4 class="text-lg font-medium text-gray-900">📄 Document Image</h4>
+                                    <div class="flex space-x-2">
+                                        <button onclick="rotateImage(-90)" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1 rounded-md text-sm font-medium flex items-center">
+                                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5z"></path>
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"></path>
+                                            </svg>
+                                            ↺ Rotate Left
+                                        </button>
+                                        <button onclick="rotateImage(90)" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1 rounded-md text-sm font-medium flex items-center">
+                                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5z"></path>
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"></path>
+                                            </svg>
+                                            ↻ Rotate Right
+                                        </button>
+                                        <button onclick="resetRotation()" class="bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-1 rounded-md text-sm font-medium">
+                                            🔄 Reset
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="border border-gray-200 rounded-lg p-4 bg-gray-50 text-center">
+                                    <img id="documentImage" 
+                                         src="{{ asset('storage/' . str_replace('storage/', '', $document->file_path)) }}"
                                          alt="{{ $document->title }}"
-                                         class="max-w-full h-auto rounded-md shadow-sm">
+                                         class="max-w-full h-auto rounded-md shadow-sm mx-auto transition-transform duration-300"
+                                         style="transform: rotate(0deg);">
                                 </div>
                             </div>
                         @endif
@@ -232,4 +255,60 @@
             @endif
         </div>
     </div>
+
+    <!-- Image Rotation JavaScript -->
+    <script>
+        let currentRotation = 0;
+
+        function rotateImage(degrees) {
+            const image = document.getElementById('documentImage');
+            if (image) {
+                currentRotation += degrees;
+                image.style.transform = `rotate(${currentRotation}deg)`;
+                
+                // Store rotation preference in localStorage for this document
+                localStorage.setItem('documentRotation_{{ $document->id }}', currentRotation);
+            }
+        }
+
+        function resetRotation() {
+            const image = document.getElementById('documentImage');
+            if (image) {
+                currentRotation = 0;
+                image.style.transform = 'rotate(0deg)';
+                
+                // Remove stored rotation preference
+                localStorage.removeItem('documentRotation_{{ $document->id }}');
+            }
+        }
+
+        // Restore saved rotation when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            const savedRotation = localStorage.getItem('documentRotation_{{ $document->id }}');
+            if (savedRotation) {
+                currentRotation = parseInt(savedRotation);
+                const image = document.getElementById('documentImage');
+                if (image) {
+                    image.style.transform = `rotate(${currentRotation}deg)`;
+                }
+            }
+        });
+
+        // Keyboard shortcuts for rotation
+        document.addEventListener('keydown', function(event) {
+            // Only activate if not typing in an input field
+            if (event.target.tagName !== 'INPUT' && event.target.tagName !== 'TEXTAREA') {
+                if (event.key === 'ArrowLeft' && event.ctrlKey) {
+                    event.preventDefault();
+                    rotateImage(-90);
+                } else if (event.key === 'ArrowRight' && event.ctrlKey) {
+                    event.preventDefault();
+                    rotateImage(90);
+                } else if (event.key === 'r' && event.ctrlKey) {
+                    event.preventDefault();
+                    resetRotation();
+                }
+            }
+        });
+    </script>
 </x-app-layout>

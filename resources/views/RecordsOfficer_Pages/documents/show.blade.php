@@ -41,11 +41,26 @@
                         <!-- Document Image/File Display -->
                         @if($document->image_path)
                             <div>
-                                <h4 class="text-lg font-medium text-gray-900 mb-3">📄 Document Image</h4>
-                                <div class="border border-gray-200 rounded-lg p-4 bg-gray-50">
-                                    <img src="{{ asset('storage/' . str_replace('storage/', '', $document->file_path)) }}"
+                                <div class="flex justify-between items-center mb-3">
+                                    <h4 class="text-lg font-medium text-gray-900">📄 Document Image</h4>
+                                    <div class="flex space-x-2">
+                                        <button onclick="rotateImage(-90)" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1 rounded-md text-sm font-medium flex items-center">
+                                            ↺ Rotate Left
+                                        </button>
+                                        <button onclick="rotateImage(90)" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1 rounded-md text-sm font-medium flex items-center">
+                                            ↻ Rotate Right
+                                        </button>
+                                        <button onclick="resetRotation()" class="bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-1 rounded-md text-sm font-medium">
+                                            🔄 Reset
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="border border-gray-200 rounded-lg p-4 bg-gray-50 text-center">
+                                    <img id="documentImage" 
+                                         src="{{ asset('storage/' . str_replace('storage/', '', $document->file_path)) }}"
                                          alt="{{ $document->title }}"
-                                         class="max-w-full h-auto rounded-md shadow-sm">
+                                         class="max-w-full h-auto rounded-md shadow-sm mx-auto transition-transform duration-300"
+                                         style="transform: rotate(0deg);">
                                 </div>
                             </div>
                         @endif
@@ -180,4 +195,53 @@
             @endif
         </div>
     </div>
+
+    <!-- Image Rotation JavaScript -->
+    <script>
+        let currentRotation = 0;
+
+        function rotateImage(degrees) {
+            const image = document.getElementById('documentImage');
+            if (image) {
+                currentRotation += degrees;
+                image.style.transform = `rotate(${currentRotation}deg)`;
+                localStorage.setItem('documentRotation_{{ $document->id }}', currentRotation);
+            }
+        }
+
+        function resetRotation() {
+            const image = document.getElementById('documentImage');
+            if (image) {
+                currentRotation = 0;
+                image.style.transform = 'rotate(0deg)';
+                localStorage.removeItem('documentRotation_{{ $document->id }}');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const savedRotation = localStorage.getItem('documentRotation_{{ $document->id }}');
+            if (savedRotation) {
+                currentRotation = parseInt(savedRotation);
+                const image = document.getElementById('documentImage');
+                if (image) {
+                    image.style.transform = `rotate(${currentRotation}deg)`;
+                }
+            }
+        });
+
+        document.addEventListener('keydown', function(event) {
+            if (event.target.tagName !== 'INPUT' && event.target.tagName !== 'TEXTAREA') {
+                if (event.key === 'ArrowLeft' && event.ctrlKey) {
+                    event.preventDefault();
+                    rotateImage(-90);
+                } else if (event.key === 'ArrowRight' && event.ctrlKey) {
+                    event.preventDefault();
+                    rotateImage(90);
+                } else if (event.key === 'r' && event.ctrlKey) {
+                    event.preventDefault();
+                    resetRotation();
+                }
+            }
+        });
+    </script>
 </x-app-layout>

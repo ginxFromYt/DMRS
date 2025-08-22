@@ -63,8 +63,8 @@ class UserSeeder extends Seeder
         // Create Document Releaser user (Jasmin) - finalizes and sends documents
         $documentReleaser = User::create([
             'first_name' => 'Jasmin',
-            'middle_name' => 'Mae',
-            'last_name' => 'Santos',
+            'middle_name' => 'L',
+            'last_name' => 'Sambrano',
             'designation' => 'Document Releaser',
             'email' => 'jasmin.releaser@dmrs.com',
             'password' => Hash::make('password123'),

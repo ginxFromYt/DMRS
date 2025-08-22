@@ -28,14 +28,19 @@ class DocumentHandlingController extends Controller
 
     /**
      * Handle image upload for admin dashboard with ML processing
+     * Supports both single and multiple file uploads (images and PDFs)
      */
     public function uploadImage(Request $request)
     {
-        // Validate the request
+        // Validate the request for both single and multiple files
         $validator = Validator::make($request->all(), [
             'title' => 'required|string|max:255',
             'description' => 'nullable|string|max:1000',
-            'image' => 'required|image|mimes:jpeg,jpg,png,gif,webp|max:2048', // 2MB max
+            'image' => 'sometimes|required_without:images|image|mimes:jpeg,jpg,png,gif,webp|max:2048', // Single image
+            'images' => 'sometimes|required_without:image|array|min:1|max:10', // Multiple images
+            'images.*' => 'image|mimes:jpeg,jpg,png,gif,webp|max:2048',
+            'pdfs' => 'sometimes|array|max:5', // PDF files
+            'pdfs.*' => 'file|mimes:pdf|max:10240', // 10MB max per PDF
         ]);
 
         if ($validator->fails()) {
@@ -45,37 +50,102 @@ class DocumentHandlingController extends Controller
         }
 
         try {
-            // Get the uploaded file
-            $image = $request->file('image');
+            $uploadedFiles = [];
+            $fileTypes = [];
+            $primaryFilePath = null;
+            $documentType = 'image'; // Default type
 
-            // Generate a unique filename
-            $filename = time() . '_' . Str::random(10) . '.' . $image->getClientOriginalExtension();
+            // Handle single image upload (legacy compatibility)
+            if ($request->hasFile('image')) {
+                $image = $request->file('image');
+                $filename = time() . '_' . Str::random(10) . '.' . $image->getClientOriginalExtension();
+                $imagePath = $image->storeAs('uploads', $filename, 'public');
+                $uploadedFiles[] = $imagePath;
+                $fileTypes[] = 'image';
+                $primaryFilePath = $imagePath;
+            }
 
-            // Store the image in the public disk under 'uploads' directory
-            $imagePath = $image->storeAs('uploads', $filename, 'public');
-            $fullImagePath = storage_path('app/public/' . $imagePath);
+            // Handle multiple image uploads
+            if ($request->hasFile('images')) {
+                foreach ($request->file('images') as $index => $image) {
+                    $filename = time() . '_' . Str::random(10) . '_' . $index . '.' . $image->getClientOriginalExtension();
+                    $imagePath = $image->storeAs('uploads', $filename, 'public');
+                    $uploadedFiles[] = $imagePath;
+                    $fileTypes[] = 'image';
+                    
+                    // Set first image as primary if not already set
+                    if (!$primaryFilePath) {
+                        $primaryFilePath = $imagePath;
+                    }
+                }
+            }
 
-            // Process the document with ML model and OCR
-            Log::info('Starting document processing for: ' . $filename);
-            $processingResults = $this->documentProcessingService->processDocument(
-                $fullImagePath,
-                $request->title,
-                $request->description
-            );
+            // Handle PDF uploads
+            if ($request->hasFile('pdfs')) {
+                foreach ($request->file('pdfs') as $index => $pdf) {
+                    $filename = time() . '_' . Str::random(10) . '_pdf_' . $index . '.' . $pdf->getClientOriginalExtension();
+                    $pdfPath = $pdf->storeAs('documents', $filename, 'public');
+                    $uploadedFiles[] = $pdfPath;
+                    $fileTypes[] = 'pdf';
+                    
+                    // Update document type if we have PDFs
+                    if ($documentType === 'image') {
+                        $documentType = count($uploadedFiles) > 1 ? 'mixed' : 'pdf';
+                    } else {
+                        $documentType = 'mixed';
+                    }
+                }
+            }
 
-            if ($processingResults['processing_status'] === 'error') {
+            if (empty($uploadedFiles)) {
                 return back()
-                    ->with('error', 'Document uploaded but processing failed: ' . $processingResults['error_message'])
+                    ->with('error', 'No files were uploaded.')
                     ->withInput();
             }
 
-            // Here you could save the processing results to database
+            // Process the primary image file with ML model and OCR (only for images)
+            $processingResults = [
+                'extracted_text' => '',
+                'detected_objects' => [],
+                'document_numbers' => [],
+                'processing_status' => 'success'
+            ];
+
+            if ($primaryFilePath) {
+                $extension = strtolower(pathinfo($primaryFilePath, PATHINFO_EXTENSION));
+                if (in_array($extension, ['jpg', 'jpeg', 'png', 'gif', 'webp'])) {
+                    $fullImagePath = storage_path('app/public/' . $primaryFilePath);
+                    Log::info('Starting document processing for primary file: ' . $primaryFilePath);
+                    
+                    $processingResults = $this->documentProcessingService->processDocument(
+                        $fullImagePath,
+                        $request->title,
+                        $request->description
+                    );
+
+                    if ($processingResults['processing_status'] === 'error') {
+                        return back()
+                            ->with('error', 'Files uploaded but processing failed: ' . $processingResults['error_message'])
+                            ->withInput();
+                    }
+                }
+            }
+
+            // Prepare file data for database
+            $primaryFile = $uploadedFiles[0]; // First uploaded file
+            $additionalFiles = array_slice($uploadedFiles, 1); // Remaining files
+            $additionalFileTypes = array_slice($fileTypes, 1);
+
             // Create document using the workflow service
             $document = $this->documentWorkflowService->createDocument([
                 'title' => $request->title,
                 'description' => $request->description,
-                'filename' => $filename,
-                'file_path' => $imagePath,
+                'filename' => basename($primaryFile),
+                'file_path' => $primaryFile,
+                'file_paths' => $additionalFiles,
+                'document_type' => $documentType,
+                'file_types' => $additionalFileTypes,
+                'primary_file_path' => $primaryFilePath ?: $primaryFile,
                 'uploaded_by' => auth()->id(),
                 'extracted_text' => $processingResults['extracted_text'],
                 'detected_objects' => $processingResults['detected_objects'],
@@ -83,9 +153,10 @@ class DocumentHandlingController extends Controller
             ]);
 
             // Prepare success message with processing results
-            $message = "Document uploaded and processed successfully!\n";
-            $message .= "File: {$filename}\n";
+            $fileCount = count($uploadedFiles);
+            $message = "Document uploaded successfully with {$fileCount} file(s)!\n";
             $message .= "Document ID: {$document->id}\n";
+            $message .= "Document Type: {$documentType}\n";
 
             if (!empty($processingResults['document_numbers'])) {
                 $message .= "Found document numbers: " . implode(', ', $processingResults['document_numbers']) . "\n";

@@ -38,30 +38,154 @@
 
                     <!-- Document Content -->
                     <div class="space-y-6">
-                        <!-- Document Image/File Display -->
-                        @if($document->image_path)
+                        <!-- Document Files Display -->
+                        @if($document->image_path || $document->image_files || $document->pdf_files)
                             <div>
-                                <div class="flex justify-between items-center mb-3">
-                                    <h4 class="text-lg font-medium text-gray-900">📄 Document Image</h4>
-                                    <div class="flex space-x-2">
-                                        <button onclick="rotateImage(-90)" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1 rounded-md text-sm font-medium flex items-center">
-                                            ↺ Rotate Left
-                                        </button>
-                                        <button onclick="rotateImage(90)" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1 rounded-md text-sm font-medium flex items-center">
-                                            ↻ Rotate Right
-                                        </button>
-                                        <button onclick="resetRotation()" class="bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-1 rounded-md text-sm font-medium">
-                                            🔄 Reset
-                                        </button>
+                                <!-- Document Type Indicator -->
+                                @if($document->document_type)
+                                    <div class="mb-4">
+                                        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium 
+                                            @if($document->document_type === 'image') bg-green-100 text-green-800
+                                            @elseif($document->document_type === 'pdf') bg-red-100 text-red-800
+                                            @else bg-purple-100 text-purple-800 @endif">
+                                            📁 {{ ucfirst($document->document_type) }} Document
+                                            @if($document->hasMultipleFiles()) ({{ count($document->all_files) }} files) @endif
+                                        </span>
                                     </div>
-                                </div>
-                                <div class="border border-gray-200 rounded-lg p-4 bg-gray-50 text-center">
-                                    <img id="documentImage" 
-                                         src="{{ asset('storage/' . str_replace('storage/', '', $document->file_path)) }}"
-                                         alt="{{ $document->title }}"
-                                         class="max-w-full h-auto rounded-md shadow-sm mx-auto transition-transform duration-300"
-                                         style="transform: rotate(0deg);">
-                                </div>
+                                @endif
+
+                                <!-- Multiple Images Display -->
+                                @if($document->image_files && count($document->image_files) > 0)
+                                    <div class="mb-6">
+                                        <div class="flex justify-between items-center mb-3">
+                                            <h4 class="text-lg font-medium text-gray-900">
+                                                📄 Document Images 
+                                                @if(count($document->image_files) > 1)
+                                                    <span class="text-sm text-gray-500">({{ count($document->image_files) }} images)</span>
+                                                @endif
+                                            </h4>
+                                            <div class="flex space-x-2">
+                                                <button onclick="rotateCurrentImage(-90)" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1 rounded-md text-sm font-medium flex items-center">
+                                                    ↺ Rotate Left
+                                                </button>
+                                                <button onclick="rotateCurrentImage(90)" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1 rounded-md text-sm font-medium flex items-center">
+                                                    ↻ Rotate Right
+                                                </button>
+                                                <button onclick="resetCurrentRotation()" class="bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-1 rounded-md text-sm font-medium">
+                                                    🔄 Reset
+                                                </button>
+                                                @if(count($document->image_files) > 1)
+                                                    <select onchange="switchImage(this.value)" class="bg-white border border-gray-300 rounded-md px-3 py-1 text-sm">
+                                                        @foreach($document->image_files as $index => $imagePath)
+                                                            <option value="{{ $index }}">Image {{ $index + 1 }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                @endif
+                                            </div>
+                                        </div>
+
+                                        <!-- Main Image Display -->
+                                        <div class="border border-gray-200 rounded-lg p-4 bg-gray-50 text-center mb-4">
+                                            @foreach($document->image_files as $index => $imagePath)
+                                                <img id="documentImage{{ $index }}" 
+                                                     src="{{ asset('storage/' . str_replace('storage/', '', $imagePath)) }}"
+                                                     alt="{{ $document->title }} - Image {{ $index + 1 }}"
+                                                     class="max-w-full h-auto rounded-md shadow-sm mx-auto transition-transform duration-300 {{ $index === 0 ? '' : 'hidden' }}"
+                                                     style="transform: rotate(0deg);"
+                                                     data-rotation="0">
+                                            @endforeach
+                                        </div>
+
+                                        <!-- Image Thumbnails (if multiple) -->
+                                        @if(count($document->image_files) > 1)
+                                            <div class="flex flex-wrap gap-2 justify-center">
+                                                @foreach($document->image_files as $index => $imagePath)
+                                                    <button onclick="switchImage({{ $index }})" 
+                                                            class="thumbnail-btn border-2 rounded-lg overflow-hidden transition-all duration-200 {{ $index === 0 ? 'border-blue-500' : 'border-gray-300 hover:border-gray-400' }}"
+                                                            data-index="{{ $index }}">
+                                                        <img src="{{ asset('storage/' . str_replace('storage/', '', $imagePath)) }}"
+                                                             alt="Thumbnail {{ $index + 1 }}"
+                                                             class="w-16 h-16 object-cover">
+                                                    </button>
+                                                @endforeach
+                                            </div>
+                                        @endif
+                                    </div>
+                                @endif
+
+                                <!-- PDF Files Display -->
+                                @if($document->pdf_files && count($document->pdf_files) > 0)
+                                    <div class="mb-6">
+                                        <h4 class="text-lg font-medium text-gray-900 mb-3">
+                                            📋 PDF Documents 
+                                            @if(count($document->pdf_files) > 1)
+                                                <span class="text-sm text-gray-500">({{ count($document->pdf_files) }} files)</span>
+                                            @endif
+                                        </h4>
+                                        <div class="space-y-4">
+                                            @foreach($document->pdf_files as $index => $pdfPath)
+                                                <div class="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                                                    <div class="flex items-center justify-between mb-3">
+                                                        <span class="text-sm font-medium text-gray-700">
+                                                            📄 {{ basename($pdfPath) }}
+                                                        </span>
+                                                        <div class="flex space-x-2">
+                                                            <a href="{{ asset('storage/' . str_replace('storage/', '', $pdfPath)) }}" 
+                                                               target="_blank"
+                                                               class="bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-1 rounded-md text-sm font-medium">
+                                                                👁️ View
+                                                            </a>
+                                                            <a href="{{ asset('storage/' . str_replace('storage/', '', $pdfPath)) }}" 
+                                                               download
+                                                               class="bg-green-100 hover:bg-green-200 text-green-700 px-3 py-1 rounded-md text-sm font-medium">
+                                                                💾 Download
+                                                            </a>
+                                                        </div>
+                                                    </div>
+                                                    <!-- PDF Embed -->
+                                                    <div class="bg-white rounded border" style="height: 500px;">
+                                                        <iframe src="{{ asset('storage/' . str_replace('storage/', '', $pdfPath)) }}" 
+                                                                class="w-full h-full rounded"
+                                                                title="PDF Viewer - {{ basename($pdfPath) }}">
+                                                            <p>Your browser doesn't support PDF viewing. 
+                                                               <a href="{{ asset('storage/' . str_replace('storage/', '', $pdfPath)) }}" target="_blank">
+                                                                   Click here to view the PDF.
+                                                               </a>
+                                                            </p>
+                                                        </iframe>
+                                                    </div>
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                    </div>
+                                @endif
+
+                                <!-- Legacy single image fallback -->
+                                @if(!($document->image_files || $document->pdf_files) && $document->image_path)
+                                    <div class="mb-6">
+                                        <div class="flex justify-between items-center mb-3">
+                                            <h4 class="text-lg font-medium text-gray-900">📄 Document Image</h4>
+                                            <div class="flex space-x-2">
+                                                <button onclick="rotateImage(-90)" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1 rounded-md text-sm font-medium flex items-center">
+                                                    ↺ Rotate Left
+                                                </button>
+                                                <button onclick="rotateImage(90)" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1 rounded-md text-sm font-medium flex items-center">
+                                                    ↻ Rotate Right
+                                                </button>
+                                                <button onclick="resetRotation()" class="bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-1 rounded-md text-sm font-medium">
+                                                    🔄 Reset
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="border border-gray-200 rounded-lg p-4 bg-gray-50 text-center">
+                                            <img id="documentImage" 
+                                                 src="{{ asset('storage/' . str_replace('storage/', '', $document->file_path)) }}"
+                                                 alt="{{ $document->title }}"
+                                                 class="max-w-full h-auto rounded-md shadow-sm mx-auto transition-transform duration-300"
+                                                 style="transform: rotate(0deg);">
+                                        </div>
+                                    </div>
+                                @endif
                             </div>
                         @endif
 
@@ -196,10 +320,72 @@
         </div>
     </div>
 
-    <!-- Image Rotation JavaScript -->
+    <!-- Image Rotation and Navigation JavaScript -->
     <script>
         let currentRotation = 0;
+        let currentImageIndex = 0;
+        let rotations = {}; // Store rotation for each image
 
+        // For multiple images
+        function rotateCurrentImage(degrees) {
+            const image = document.getElementById(`documentImage${currentImageIndex}`);
+            if (image) {
+                if (!rotations[currentImageIndex]) {
+                    rotations[currentImageIndex] = 0;
+                }
+                rotations[currentImageIndex] += degrees;
+                image.style.transform = `rotate(${rotations[currentImageIndex]}deg)`;
+                image.setAttribute('data-rotation', rotations[currentImageIndex]);
+                localStorage.setItem(`documentRotations_{{ $document->id }}`, JSON.stringify(rotations));
+            }
+        }
+
+        function resetCurrentRotation() {
+            const image = document.getElementById(`documentImage${currentImageIndex}`);
+            if (image) {
+                rotations[currentImageIndex] = 0;
+                image.style.transform = 'rotate(0deg)';
+                image.setAttribute('data-rotation', '0');
+                localStorage.setItem(`documentRotations_{{ $document->id }}`, JSON.stringify(rotations));
+            }
+        }
+
+        function switchImage(index) {
+            // Hide current image
+            const currentImage = document.getElementById(`documentImage${currentImageIndex}`);
+            if (currentImage) {
+                currentImage.classList.add('hidden');
+            }
+
+            // Update thumbnail selection
+            const currentThumbnail = document.querySelector(`.thumbnail-btn[data-index="${currentImageIndex}"]`);
+            if (currentThumbnail) {
+                currentThumbnail.classList.remove('border-blue-500');
+                currentThumbnail.classList.add('border-gray-300', 'hover:border-gray-400');
+            }
+
+            // Show new image
+            currentImageIndex = parseInt(index);
+            const newImage = document.getElementById(`documentImage${currentImageIndex}`);
+            if (newImage) {
+                newImage.classList.remove('hidden');
+            }
+
+            // Update thumbnail selection
+            const newThumbnail = document.querySelector(`.thumbnail-btn[data-index="${currentImageIndex}"]`);
+            if (newThumbnail) {
+                newThumbnail.classList.add('border-blue-500');
+                newThumbnail.classList.remove('border-gray-300', 'hover:border-gray-400');
+            }
+
+            // Update select dropdown if it exists
+            const select = document.querySelector('select[onchange="switchImage(this.value)"]');
+            if (select) {
+                select.value = currentImageIndex;
+            }
+        }
+
+        // Legacy single image functions
         function rotateImage(degrees) {
             const image = document.getElementById('documentImage');
             if (image) {
@@ -219,6 +405,24 @@
         }
 
         document.addEventListener('DOMContentLoaded', function() {
+            // Load saved rotations for multiple images
+            const savedRotations = localStorage.getItem(`documentRotations_{{ $document->id }}`);
+            if (savedRotations) {
+                try {
+                    rotations = JSON.parse(savedRotations);
+                    Object.keys(rotations).forEach(index => {
+                        const image = document.getElementById(`documentImage${index}`);
+                        if (image) {
+                            image.style.transform = `rotate(${rotations[index]}deg)`;
+                            image.setAttribute('data-rotation', rotations[index]);
+                        }
+                    });
+                } catch (e) {
+                    console.log('Error loading saved rotations:', e);
+                }
+            }
+
+            // Load saved rotation for single image (legacy)
             const savedRotation = localStorage.getItem('documentRotation_{{ $document->id }}');
             if (savedRotation) {
                 currentRotation = parseInt(savedRotation);
@@ -233,13 +437,44 @@
             if (event.target.tagName !== 'INPUT' && event.target.tagName !== 'TEXTAREA') {
                 if (event.key === 'ArrowLeft' && event.ctrlKey) {
                     event.preventDefault();
-                    rotateImage(-90);
+                    const hasMultipleImages = document.getElementById(`documentImage${currentImageIndex}`);
+                    if (hasMultipleImages) {
+                        rotateCurrentImage(-90);
+                    } else {
+                        rotateImage(-90);
+                    }
                 } else if (event.key === 'ArrowRight' && event.ctrlKey) {
                     event.preventDefault();
-                    rotateImage(90);
+                    const hasMultipleImages = document.getElementById(`documentImage${currentImageIndex}`);
+                    if (hasMultipleImages) {
+                        rotateCurrentImage(90);
+                    } else {
+                        rotateImage(90);
+                    }
                 } else if (event.key === 'r' && event.ctrlKey) {
                     event.preventDefault();
-                    resetRotation();
+                    const hasMultipleImages = document.getElementById(`documentImage${currentImageIndex}`);
+                    if (hasMultipleImages) {
+                        resetCurrentRotation();
+                    } else {
+                        resetRotation();
+                    }
+                } else if (event.key === 'ArrowUp' && event.ctrlKey) {
+                    // Navigate to previous image
+                    event.preventDefault();
+                    const totalImages = document.querySelectorAll('[id^="documentImage"]').length;
+                    if (totalImages > 1) {
+                        const prevIndex = currentImageIndex > 0 ? currentImageIndex - 1 : totalImages - 1;
+                        switchImage(prevIndex);
+                    }
+                } else if (event.key === 'ArrowDown' && event.ctrlKey) {
+                    // Navigate to next image
+                    event.preventDefault();
+                    const totalImages = document.querySelectorAll('[id^="documentImage"]').length;
+                    if (totalImages > 1) {
+                        const nextIndex = currentImageIndex < totalImages - 1 ? currentImageIndex + 1 : 0;
+                        switchImage(nextIndex);
+                    }
                 }
             }
         });

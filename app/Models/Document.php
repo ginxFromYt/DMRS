@@ -16,6 +16,10 @@ class Document extends Model
         'description',
         'filename',
         'file_path',
+        'file_paths',
+        'document_type',
+        'file_types',
+        'primary_file_path',
         'status',
         'uploaded_by',
         'assigned_to',
@@ -41,6 +45,8 @@ class Document extends Model
     protected $casts = [
         'detected_objects' => 'array',
         'document_numbers' => 'array',
+        'file_paths' => 'array',
+        'file_types' => 'array',
         'received_at' => 'datetime',
         'forwarded_at' => 'datetime',
         'reviewed_at' => 'datetime',
@@ -101,6 +107,120 @@ class Document extends Model
         $extension = strtolower(pathinfo($this->file_path, PATHINFO_EXTENSION));
 
         return in_array($extension, $imageExtensions) ? $this->file_path : null;
+    }
+
+    /**
+     * Get all image files from the document
+     */
+    public function getImageFilesAttribute()
+    {
+        $images = [];
+        $imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'];
+
+        // Add primary file if it's an image
+        if ($this->file_path) {
+            $extension = strtolower(pathinfo($this->file_path, PATHINFO_EXTENSION));
+            if (in_array($extension, $imageExtensions)) {
+                $images[] = $this->file_path;
+            }
+        }
+
+        // Add additional image files
+        if ($this->file_paths) {
+            foreach ($this->file_paths as $index => $filePath) {
+                $extension = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
+                if (in_array($extension, $imageExtensions)) {
+                    $images[] = $filePath;
+                }
+            }
+        }
+
+        return array_unique($images);
+    }
+
+    /**
+     * Get all PDF files from the document
+     */
+    public function getPdfFilesAttribute()
+    {
+        $pdfs = [];
+
+        // Check primary file
+        if ($this->file_path) {
+            $extension = strtolower(pathinfo($this->file_path, PATHINFO_EXTENSION));
+            if ($extension === 'pdf') {
+                $pdfs[] = $this->file_path;
+            }
+        }
+
+        // Check additional files
+        if ($this->file_paths) {
+            foreach ($this->file_paths as $filePath) {
+                $extension = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
+                if ($extension === 'pdf') {
+                    $pdfs[] = $filePath;
+                }
+            }
+        }
+
+        return array_unique($pdfs);
+    }
+
+    /**
+     * Get all files from the document
+     */
+    public function getAllFilesAttribute()
+    {
+        $files = [];
+
+        // Add primary file
+        if ($this->file_path) {
+            $files[] = $this->file_path;
+        }
+
+        // Add additional files
+        if ($this->file_paths) {
+            $files = array_merge($files, $this->file_paths);
+        }
+
+        return array_unique($files);
+    }
+
+    /**
+     * Check if document has multiple files
+     */
+    public function hasMultipleFiles()
+    {
+        return count($this->getAllFilesAttribute()) > 1;
+    }
+
+    /**
+     * Check if document has PDF files
+     */
+    public function hasPdfFiles()
+    {
+        return count($this->getPdfFilesAttribute()) > 0;
+    }
+
+    /**
+     * Get the primary display file (image or first file)
+     */
+    public function getPrimaryDisplayFileAttribute()
+    {
+        // Use primary_file_path if set
+        if ($this->primary_file_path) {
+            return $this->primary_file_path;
+        }
+
+        // Otherwise use the first image file
+        $images = $this->getImageFilesAttribute();
+        if (!empty($images)) {
+            return $images[0];
+        }
+
+        // Fallback to the first available file
+        $allFiles = $this->getAllFilesAttribute();
+        return !empty($allFiles) ? $allFiles[0] : $this->file_path;
     }
 
     /**

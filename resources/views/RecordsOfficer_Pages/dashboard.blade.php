@@ -106,20 +106,139 @@
                         </div>
 
                         <!-- Document File Upload -->
-                        <div>
-                            <label for="image" class="block text-sm font-medium text-gray-700 mb-2">
-                                Document Image *
-                            </label>
-                            <input type="file"
-                                   id="image"
-                                   name="image"
-                                   accept="image/*"
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" required>
-                            @error('image')
-                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                            @enderror
-                            <p class="mt-1 text-sm text-gray-500">Supported: JPG, PNG, GIF, WebP. Max: 2MB. Text extraction will be performed automatically.</p>
+                        <div class="space-y-4">
+                            <!-- Upload Type Selection -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Upload Type *
+                                </label>
+                                <div class="flex space-x-4">
+                                    <label class="flex items-center">
+                                        <input type="radio" name="upload_type" value="single" checked 
+                                               class="mr-2 text-blue-600 focus:ring-blue-500" 
+                                               onchange="toggleUploadType()">
+                                        <span class="text-sm text-gray-700">Single Image</span>
+                                    </label>
+                                    <label class="flex items-center">
+                                        <input type="radio" name="upload_type" value="multiple" 
+                                               class="mr-2 text-blue-600 focus:ring-blue-500" 
+                                               onchange="toggleUploadType()">
+                                        <span class="text-sm text-gray-700">Multiple Images</span>
+                                    </label>
+                                    <label class="flex items-center">
+                                        <input type="radio" name="upload_type" value="mixed" 
+                                               class="mr-2 text-blue-600 focus:ring-blue-500" 
+                                               onchange="toggleUploadType()">
+                                        <span class="text-sm text-gray-700">Images + PDFs</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Single Image Upload -->
+                            <div id="single-upload">
+                                <label for="image" class="block text-sm font-medium text-gray-700 mb-2">
+                                    Document Image *
+                                </label>
+                                <input type="file"
+                                       id="image"
+                                       name="image"
+                                       accept="image/*"
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                                @error('image')
+                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                @enderror
+                                <p class="mt-1 text-sm text-gray-500">Supported: JPG, PNG, GIF, WebP. Max: 2MB per file.</p>
+                            </div>
+
+                            <!-- Multiple Images Upload -->
+                            <div id="multiple-upload" style="display: none;">
+                                <label for="images" class="block text-sm font-medium text-gray-700 mb-2">
+                                    Document Images * (1-10 files)
+                                </label>
+                                <input type="file"
+                                       id="images"
+                                       name="images[]"
+                                       accept="image/*"
+                                       multiple
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                                @error('images')
+                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                @enderror
+                                @error('images.*')
+                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                @enderror
+                                <p class="mt-1 text-sm text-gray-500">Supported: JPG, PNG, GIF, WebP. Max: 2MB per file, 10 files total.</p>
+                            </div>
+
+                            <!-- Mixed Upload (Images + PDFs) -->
+                            <div id="mixed-upload" style="display: none;">
+                                <div class="space-y-4">
+                                    <div>
+                                        <label for="images-mixed" class="block text-sm font-medium text-gray-700 mb-2">
+                                            Document Images (1-10 files)
+                                        </label>
+                                        <input type="file"
+                                               id="images-mixed"
+                                               name="images[]"
+                                               accept="image/*"
+                                               multiple
+                                               class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                                        <p class="mt-1 text-sm text-gray-500">JPG, PNG, GIF, WebP. Max: 2MB per file.</p>
+                                    </div>
+                                    <div>
+                                        <label for="pdfs" class="block text-sm font-medium text-gray-700 mb-2">
+                                            PDF Documents (0-5 files)
+                                        </label>
+                                        <input type="file"
+                                               id="pdfs"
+                                               name="pdfs[]"
+                                               accept=".pdf"
+                                               multiple
+                                               class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-red-50 file:text-red-700 hover:file:bg-red-100">
+                                        @error('pdfs')
+                                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                        @enderror
+                                        @error('pdfs.*')
+                                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                        @enderror
+                                        <p class="mt-1 text-sm text-gray-500">PDF files only. Max: 10MB per file.</p>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
+
+                        <script>
+                            function toggleUploadType() {
+                                const uploadType = document.querySelector('input[name="upload_type"]:checked').value;
+                                const singleUpload = document.getElementById('single-upload');
+                                const multipleUpload = document.getElementById('multiple-upload');
+                                const mixedUpload = document.getElementById('mixed-upload');
+
+                                // Hide all upload sections
+                                singleUpload.style.display = 'none';
+                                multipleUpload.style.display = 'none';
+                                mixedUpload.style.display = 'none';
+
+                                // Clear all inputs
+                                document.getElementById('image').value = '';
+                                document.getElementById('images').value = '';
+                                document.getElementById('images-mixed').value = '';
+                                document.getElementById('pdfs').value = '';
+
+                                // Show selected upload type
+                                switch (uploadType) {
+                                    case 'single':
+                                        singleUpload.style.display = 'block';
+                                        break;
+                                    case 'multiple':
+                                        multipleUpload.style.display = 'block';
+                                        break;
+                                    case 'mixed':
+                                        mixedUpload.style.display = 'block';
+                                        break;
+                                }
+                            }
+                        </script>
 
                         <!-- Submit Button -->
                         <div class="flex justify-end">

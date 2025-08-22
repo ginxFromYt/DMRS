@@ -121,11 +121,11 @@ class DocumentHandlingController extends Controller
             if ($primaryFilePath) {
                 $extension = strtolower(pathinfo($primaryFilePath, PATHINFO_EXTENSION));
                 $fullFilePath = storage_path('app/public/' . $primaryFilePath);
-                
+
                 if (in_array($extension, ['jpg', 'jpeg', 'png', 'gif', 'webp'])) {
                     // Process image file
                     Log::info('Starting image processing for primary file: ' . $primaryFilePath);
-                    
+
                     $imageResults = $this->documentProcessingService->processDocument(
                         $fullFilePath,
                         $request->title,
@@ -141,11 +141,11 @@ class DocumentHandlingController extends Controller
                     $allExtractedText[] = $imageResults['extracted_text'];
                     $allDetectedObjects = array_merge($allDetectedObjects, $imageResults['detected_objects']);
                     $allDocumentNumbers = array_merge($allDocumentNumbers, $imageResults['document_numbers']);
-                    
+
                 } elseif ($extension === 'pdf') {
                     // Process PDF file
                     Log::info('Starting PDF processing for primary file: ' . $primaryFilePath);
-                    
+
                     $pdfResults = $this->documentProcessingService->processPdf(
                         $fullFilePath,
                         $request->title,
@@ -167,13 +167,13 @@ class DocumentHandlingController extends Controller
             // Process additional files for text extraction
             foreach ($uploadedFiles as $index => $filePath) {
                 if ($filePath === $primaryFilePath) continue; // Skip primary file (already processed)
-                
+
                 $extension = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
                 $fullFilePath = storage_path('app/public/' . $filePath);
-                
+
                 if ($extension === 'pdf') {
                     Log::info("Processing additional PDF file: {$filePath}");
-                    
+
                     $pdfResults = $this->documentProcessingService->processPdf(
                         $fullFilePath,
                         $request->title,
@@ -223,11 +223,11 @@ class DocumentHandlingController extends Controller
             $fileCount = count($uploadedFiles);
             $imageCount = count(array_filter($fileTypes, fn($type) => $type === 'image'));
             $pdfCount = count(array_filter($fileTypes, fn($type) => $type === 'pdf'));
-            
+
             $message = "Document uploaded successfully with {$fileCount} file(s)!\n";
             $message .= "Document ID: {$document->id}\n";
             $message .= "Document Type: {$documentType}\n";
-            
+
             if ($imageCount > 0 && $pdfCount > 0) {
                 $message .= "Files: {$imageCount} image(s) + {$pdfCount} PDF(s)\n";
             } elseif ($pdfCount > 0) {

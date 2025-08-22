@@ -247,7 +247,7 @@
                                                     <strong>File {{ $index + 1 }} - PDF Document</strong>
                                                 </div>
                                             @endif
-                                            
+
                                             <div class="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
                                                 @if(isset($metadata['pages']) && $metadata['pages'] !== 'Unknown')
                                                     <div>
@@ -255,28 +255,28 @@
                                                         <span class="text-gray-600">{{ $metadata['pages'] }}</span>
                                                     </div>
                                                 @endif
-                                                
+
                                                 @if(isset($metadata['author']) && $metadata['author'])
                                                     <div>
                                                         <span class="font-medium text-gray-700">Author:</span>
                                                         <span class="text-gray-600">{{ $metadata['author'] }}</span>
                                                     </div>
                                                 @endif
-                                                
+
                                                 @if(isset($metadata['creator']) && $metadata['creator'])
                                                     <div>
                                                         <span class="font-medium text-gray-700">Creator:</span>
                                                         <span class="text-gray-600">{{ $metadata['creator'] }}</span>
                                                     </div>
                                                 @endif
-                                                
+
                                                 @if(isset($metadata['creation_date']) && $metadata['creation_date'])
                                                     <div>
                                                         <span class="font-medium text-gray-700">Created:</span>
                                                         <span class="text-gray-600">{{ date('M d, Y', strtotime($metadata['creation_date'])) }}</span>
                                                     </div>
                                                 @endif
-                                                
+
                                                 @if(isset($metadata['document_type']) && $metadata['document_type'])
                                                     <div>
                                                         <span class="font-medium text-gray-700">Type:</span>

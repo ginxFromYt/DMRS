@@ -38,7 +38,7 @@ class DocumentProcessingService
 
         // Initialize Intervention Image
         $this->imageManager = new ImageManager(new Driver());
-        
+
         // Initialize PDF Parser
         $this->pdfParser = new PdfParser();
     }
@@ -149,7 +149,7 @@ class DocumentProcessingService
             $output = shell_exec($command);
 
             Log::info('Raw Python output: ' . ($output ?: 'NULL - shell_exec returned null'));
-            
+
             if ($output === null || trim($output) === '') {
                 Log::error('Failed to execute Python ONNX script - shell_exec returned null or empty');
                 Log::error('Check if python is in PATH and accessible from web server');
@@ -164,7 +164,7 @@ class DocumentProcessingService
 
             foreach ($lines as $line) {
                 $trimmedLine = trim($line);
-                
+
                 // Look for the start of JSON (line starting with {)
                 if (!$jsonStarted && strpos($trimmedLine, '{') === 0) {
                     $jsonStarted = true;
@@ -173,7 +173,7 @@ class DocumentProcessingService
                 } elseif ($jsonStarted) {
                     $jsonLine .= $line . "\n";
                     $braceCount += substr_count($line, '{') - substr_count($line, '}');
-                    
+
                     // Stop when we've closed all braces
                     if ($braceCount <= 0) {
                         break;
@@ -545,7 +545,7 @@ class DocumentProcessingService
 
         } catch (\Exception $e) {
             Log::error("PDF processing failed for {$pdfPath}: " . $e->getMessage());
-            
+
             return [
                 'title' => $title,
                 'description' => $description,
